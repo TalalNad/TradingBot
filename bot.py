@@ -265,6 +265,27 @@ class TradeStore:
             )
 
 
+def read_recent_trades(trades_file: Path, limit: int = 25) -> list[dict[str, Any]]:
+    if not trades_file.exists() or trades_file.stat().st_size == 0:
+        return []
+
+    with trades_file.open("r", newline="", encoding="utf-8") as file_handle:
+        rows = list(csv.DictReader(file_handle))
+
+    rows.reverse()
+    return rows[:limit]
+
+
+def read_recent_log_lines(log_file: Path, limit: int = 80) -> list[str]:
+    if not log_file.exists() or log_file.stat().st_size == 0:
+        return []
+
+    with log_file.open("r", encoding="utf-8") as file_handle:
+        lines = file_handle.readlines()
+
+    return [line.rstrip("\n") for line in lines[-limit:]]
+
+
 class DryRunExchangeClient:
     def place_market_order(
         self, symbol: str, side: str, quantity: str
@@ -456,6 +477,44 @@ def create_app() -> Flask:
             }
         )
 
+    @app.get("/api/status")
+    def api_status() -> Any:
+        return jsonify(
+            {
+                "ok": True,
+                "mode": "dry_run" if config.dry_run else "binance_spot_testnet",
+                "default_symbol": config.default_symbol,
+                "default_quantity": config.default_quantity,
+                "webhook_secret_configured": bool(config.webhook_secret),
+                "testnet_url": config.binance_base_url,
+                "files": {
+                    "alerts": str(config.alerts_file.relative_to(PROJECT_ROOT)),
+                    "trades": str(config.trades_file.relative_to(PROJECT_ROOT)),
+                    "logs": str(config.log_file.relative_to(PROJECT_ROOT)),
+                },
+            }
+        )
+
+    @app.get("/api/trades")
+    def api_trades() -> Any:
+        limit = parse_limit(request.args.get("limit"), default=25, maximum=100)
+        return jsonify(
+            {
+                "ok": True,
+                "trades": read_recent_trades(config.trades_file, limit=limit),
+            }
+        )
+
+    @app.get("/api/logs")
+    def api_logs() -> Any:
+        limit = parse_limit(request.args.get("limit"), default=80, maximum=300)
+        return jsonify(
+            {
+                "ok": True,
+                "lines": read_recent_log_lines(config.log_file, limit=limit),
+            }
+        )
+
     @app.post("/webhook/tradingview")
     def tradingview_webhook() -> Any:
         if not request.is_json:
@@ -553,6 +612,18 @@ def error_response(
     if details is not None:
         body["details"] = details
     return jsonify(body), status_code
+
+
+def parse_limit(raw_value: str | None, default: int, maximum: int) -> int:
+    if raw_value is None:
+        return default
+
+    try:
+        limit = int(raw_value)
+    except ValueError:
+        return default
+
+    return max(1, min(limit, maximum))
 
 
 if __name__ == "__main__":

@@ -57,6 +57,35 @@ curl -X POST http://127.0.0.1:5000/webhook/tradingview \
   --data @samples/sell_alert.json
 ```
 
+## Run the React dashboard
+
+The dashboard is in `frontend/`. It expects the Flask bot to be running on port
+`5050`.
+
+Terminal 1:
+
+```bash
+source .venv/bin/activate
+DRY_RUN=true WEBHOOK_SECRET=change-this-secret PORT=5050 python bot.py
+```
+
+Terminal 2:
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+Open:
+
+```text
+http://127.0.0.1:5173
+```
+
+The dashboard can send BUY/SELL test alerts, show the latest server response,
+and read recent rows from `data/trades.csv` and `logs/bot.log`.
+
 ## TradingView setup
 
 1. Open TradingView and add the script from

@@ -1,0 +1,9 @@
+{
+  "secret": "change-this-secret",
+  "signal": "buy",
+  "symbol": "BTCUSDT",
+  "quantity": "0.001",
+  "strategy": "EMA_RSI_Webhook_Bot",
+  "price": "65000.00",
+  "timeframe": "15"
+}

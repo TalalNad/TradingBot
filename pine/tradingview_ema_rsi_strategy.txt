@@ -1,0 +1,50 @@
+//@version=5
+strategy("EMA RSI Webhook Bot (Demo Testnet)", overlay=true, pyramiding=0, process_orders_on_close=true, initial_capital=10000, default_qty_type=strategy.percent_of_equity, default_qty_value=10)
+
+fastLength = input.int(9, "Fast EMA Length", minval=1)
+slowLength = input.int(21, "Slow EMA Length", minval=1)
+rsiLength = input.int(14, "RSI Length", minval=1)
+rsiBuyMax = input.float(70.0, "Buy Only When RSI Below", minval=1, maxval=100)
+rsiSellMin = input.float(30.0, "Sell Only When RSI Above", minval=1, maxval=100)
+
+webhookSecret = input.string("change-this-secret", "Webhook Secret")
+webhookSymbol = input.string("BTCUSDT", "Webhook Symbol")
+webhookQuantity = input.string("0.001", "Order Quantity")
+
+fastEma = ta.ema(close, fastLength)
+slowEma = ta.ema(close, slowLength)
+rsiValue = ta.rsi(close, rsiLength)
+
+buySignal = ta.crossover(fastEma, slowEma) and rsiValue < rsiBuyMax
+sellSignal = ta.crossunder(fastEma, slowEma) and rsiValue > rsiSellMin and strategy.position_size > 0
+
+buildMessage(signal) =>
+    '{"secret":"' + webhookSecret + '","signal":"' + signal + '","symbol":"' + webhookSymbol + '","quantity":"' + webhookQuantity + '","strategy":"EMA_RSI_Webhook_Bot","price":"' + str.tostring(close, format.mintick) + '","timeframe":"' + timeframe.period + '","bar_time":"' + str.tostring(time) + '"}'
+
+if buySignal
+    buyMessage = buildMessage("buy")
+    strategy.entry("Long", strategy.long, alert_message=buyMessage)
+    alert(buyMessage, alert.freq_once_per_bar_close)
+
+if sellSignal
+    sellMessage = buildMessage("sell")
+    strategy.close("Long", alert_message=sellMessage)
+    alert(sellMessage, alert.freq_once_per_bar_close)
+
+plot(fastEma, title="Fast EMA", color=color.new(color.teal, 0), linewidth=2)
+plot(slowEma, title="Slow EMA", color=color.new(color.orange, 0), linewidth=2)
+
+plotshape(buySignal, title="Buy Signal", style=shape.triangleup, location=location.belowbar, color=color.new(color.green, 0), text="BUY", textcolor=color.white, size=size.small)
+
+plotshape(sellSignal, title="Sell Signal", style=shape.triangledown, location=location.abovebar, color=color.new(color.red, 0), text="SELL", textcolor=color.white, size=size.small)
+
+alertcondition(buySignal, title="Buy Signal JSON", message="{\"signal\":\"buy\",\"symbol\":\"BTCUSDT\",\"quantity\":\"0.001\"}")
+
+alertcondition(sellSignal, title="Sell Signal JSON", message="{\"signal\":\"sell\",\"symbol\":\"BTCUSDT\",\"quantity\":\"0.001\"}")
+
+// TradingView alert setup:
+// 1. Add this script to a crypto chart.
+// 2. Set Webhook Secret, Webhook Symbol, and Order Quantity in script settings.
+// 3. Create an alert using condition: "EMA RSI Webhook Bot (Demo Testnet) - Any alert() function call".
+// 4. Webhook URL should be your public Flask endpoint:
+//    https://your-public-url/webhook/tradingview

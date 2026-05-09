@@ -1,0 +1,10 @@
+flowchart LR
+    A[TradingView Pine Script] --> B[Buy/Sell Alert]
+    B --> C[JSON Webhook Payload]
+    C --> D[Flask Server: /webhook/tradingview]
+    D --> E[Validate Secret and Signal]
+    E --> F[Log Alert Locally]
+    E --> G[Create Market Order]
+    G --> H[Binance Spot Testnet]
+    H --> I[Order Response]
+    I --> J[Save Trade to CSV]

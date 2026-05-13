@@ -1,100 +1,432 @@
-# Crypto Trading Bot Using TradingView Webhooks and Python
+# Automated Trading Bot Using TradingView and Binance Testnet
 
-Student name: ____________________
+**Name:** Talal Nadeem
+**Roll Number:** 22L-6679
+**Assignment:** 4
+**Course:** Blockchain and Cryptocurrency
 
-Course/section: __________________
+---
 
-Date: ____________________________
+## 1. Introduction
 
-## 1. Overview of Trading Strategy
+This project demonstrates the development of a fully automated trading bot using TradingView, Pine Script, Python Flask, webhooks, and Binance Spot Testnet. The system automatically generates trading signals based on technical indicators and executes demo trades on a cryptocurrency exchange test environment.
 
-This project implements a demo-only crypto trading bot. The strategy uses two common technical indicators: Exponential Moving Averages (EMA) and Relative Strength Index (RSI). A buy signal is produced when the fast EMA crosses above the slow EMA and RSI is below the configured upper limit. A sell signal is produced when the fast EMA crosses below the slow EMA while a long position is open and RSI is above the configured lower limit.
+The project was developed for educational purposes only using Binance Spot Testnet, ensuring that no real money or live trading was involved.
 
-The purpose of using EMA crossover is to identify changes in trend direction. The RSI filter reduces low-quality entries by avoiding buys when the market is already extremely overbought and avoiding sells when the market is extremely oversold. For this assignment, the bot is connected only to Binance Spot Testnet, so every trade is a demo trade.
+The complete automation workflow is:
 
-## 2. Pine Script Logic
+```
+TradingView → Webhook → Python Flask Server → Binance Spot Testnet
+```
 
-The Pine Script file is `pine/tradingview_ema_rsi_strategy.txt`. It defines a TradingView strategy named "EMA RSI Webhook Bot (Demo Testnet)".
+The project includes:
 
-Main inputs:
+- Pine Script trading strategy
+- TradingView chart signals
+- Webhook communication
+- Python backend server
+- Binance Spot Testnet integration
+- CSV trade logging
 
-- Fast EMA length: default 9
-- Slow EMA length: default 21
-- RSI length: default 14
-- Buy filter: RSI below 70
-- Sell filter: RSI above 30
-- Webhook secret, symbol, and order quantity
+---
 
-The script plots the fast EMA and slow EMA on the chart. It also plots BUY and SELL markers when signals are triggered. When a signal happens, the script sends a JSON alert message using TradingView's `alert()` function. Example buy payload:
+## 2. Objectives
+
+The main objectives of this project are:
+
+- Develop a trading strategy using Pine Script
+- Generate automated BUY and SELL signals
+- Send TradingView alerts as JSON payloads
+- Build a Python Flask webhook server
+- Execute demo market trades using Binance Testnet API
+- Store trade history locally
+- Demonstrate automated trading workflow safely using testnet accounts
+
+---
+
+## 3. Technologies Used
+
+| Technology | Purpose |
+|---|---|
+| TradingView | Charting and signal generation |
+| Pine Script v5 | Trading strategy logic |
+| Python | Backend development |
+| Flask | Webhook server |
+| Binance Spot Testnet | Demo trade execution |
+| ngrok | Public webhook URL |
+| CSV | Trade history storage |
+| VS Code | Development environment |
+
+---
+
+## 4. Trading Strategy Overview
+
+The trading strategy is based on:
+
+1. EMA Crossover
+2. RSI Confirmation
+
+### 4.1 EMA Crossover
+
+Two Exponential Moving Averages (EMA) are used:
+
+- Fast EMA = 9
+- Slow EMA = 21
+
+**Buy Signal**
+
+A BUY signal occurs when:
+
+```
+EMA 9 crosses above EMA 21
+```
+
+This indicates bullish momentum.
+
+**Sell Signal**
+
+A SELL signal occurs when:
+
+```
+EMA 9 crosses below EMA 21
+```
+
+This indicates bearish momentum.
+
+### 4.2 RSI Confirmation
+
+The Relative Strength Index (RSI) is used to confirm momentum.
+
+**Buy Confirmation**
+
+```
+RSI > 50
+```
+
+**Sell Confirmation**
+
+```
+RSI < 40
+```
+
+The RSI filter helps reduce false signals.
+
+---
+
+## 5. Pine Script Implementation
+
+The Pine Script strategy was developed using Pine Script version 5 in TradingView.
+
+The script performs the following tasks:
+
+- Calculates EMA indicators
+- Calculates RSI indicator
+- Detects BUY and SELL conditions
+- Plots signals on the chart
+- Sends webhook alerts in JSON format
+
+### 5.1 Pine Script Code
+
+```pine
+//@version=5
+strategy("EMA RSI Webhook Bot", overlay=true)
+
+fastEma = ta.ema(close, 9)
+slowEma = ta.ema(close, 21)
+rsi = ta.rsi(close, 14)
+
+buyCondition = ta.crossover(fastEma, slowEma) and rsi > 50
+sellCondition = ta.crossunder(fastEma, slowEma) and rsi < 45
+
+plot(fastEma, color=color.green)
+plot(slowEma, color=color.red)
+
+plotshape(buyCondition, style=shape.labelup,
+    location=location.belowbar,
+    color=color.green,
+    text="BUY",
+    size=size.small)
+
+plotshape(sellCondition, style=shape.labeldown,
+    location=location.abovebar,
+    color=color.red,
+    text="SELL",
+    size=size.small)
+
+if buyCondition
+    strategy.entry("BUY", strategy.long)
+    alert('{"secret":"my_secret_123","signal":"buy","symbol":"BTCUSDT"}',
+        alert.freq_once_per_bar_close)
+
+if sellCondition
+    strategy.close("BUY")
+    alert('{"secret":"my_secret_123","signal":"sell","symbol":"BTCUSDT"}',
+        alert.freq_once_per_bar_close)
+```
+
+---
+
+## 6. TradingView Signal Visualization
+
+The Pine Script strategy was applied to the BTCUSDT chart in TradingView.
+
+The chart displayed:
+
+- Green EMA line
+- Red EMA line
+- BUY labels
+- SELL labels
+
+![TradingView BTCUSDT Chart with BUY/SELL Signals](tradingview_chart.png)
+
+The strategy was also backtested using TradingView Strategy Tester to evaluate performance.
+
+![Strategy Report — Equity Chart and Backtest Results](strategy_report.png)
+
+---
+
+## 7. Webhook Integration
+
+Webhook integration was implemented to send TradingView alerts to the Python Flask server.
+
+The alert payload was formatted as JSON:
 
 ```json
 {
-  "secret": "change-this-secret",
-  "signal": "buy",
-  "symbol": "BTCUSDT",
-  "quantity": "0.001",
-  "strategy": "EMA_RSI_Webhook_Bot",
-  "price": "65000.00",
-  "timeframe": "15",
-  "bar_time": "1710000000000"
+    "secret": "my_secret_123",
+    "signal": "buy",
+    "symbol": "BTCUSDT"
 }
 ```
 
-## 3. Webhook Workflow Diagram
+The webhook URL was generated using ngrok:
 
-The system flow is:
-
-```text
-TradingView Pine Script -> Buy/Sell Alert -> JSON Webhook Payload
--> Flask Server -> Validate Secret and Signal -> Binance Spot Testnet
--> Order Response -> Local Trade History
+```
+https://undoing-yen-enzyme.ngrok-free.dev -> http://localhost:5000
 ```
 
-The diagram source is in `docs/system_flow.mmd`, and an SVG version is in `docs/system_flow.svg`.
+![ngrok Tunnel and TradingView Alert Setup](ngrok_webhook.png)
 
-## 4. Python Code Explanation
+TradingView webhook alerts were simulated manually because webhook functionality requires a paid TradingView plan.
 
-The Python backend is implemented in `bot.py` using Flask. The server exposes a POST endpoint:
+---
 
-```text
+## 8. Python Flask Backend
+
+The Python backend was developed using Flask.
+
+The server performs the following functions:
+
+- Receives POST webhook requests
+- Parses JSON data
+- Validates webhook secret
+- Executes demo trades on Binance Testnet
+- Stores trade history in CSV format
+- Handles invalid signals and API errors
+
+### 8.1 Flask Webhook Route
+
+The Flask route listens on:
+
+```
 /webhook/tradingview
 ```
 
-When a request arrives, the bot:
+The route accepts TradingView JSON alerts.
 
-1. Checks that the request body is JSON.
-2. Saves the incoming alert to `data/alerts.jsonl`.
-3. Verifies the webhook secret if `WEBHOOK_SECRET` is configured.
-4. Validates that the signal is either `buy` or `sell`.
-5. Validates the symbol and quantity.
-6. Sends a market order to Binance Spot Testnet when `DRY_RUN=false`.
-7. Saves the trade result to `data/trades.csv`.
-8. Writes server events and errors to `logs/bot.log`.
+### 8.2 Error Handling
 
-The bot starts in `DRY_RUN=true` mode by default. In dry-run mode, it records fake fills locally without sending requests to Binance. This is useful for proving webhook flow before using testnet API keys. The code refuses non-testnet Binance URLs, which helps enforce the assignment rule that real trading is not allowed.
+The Python bot includes simple error handling for:
 
-## 5. Screenshots
+- Unauthorized secret key
+- Invalid signal values
+- Binance API exceptions
 
-Add screenshots after running the project:
+Server startup output:
 
-Screenshot 1: TradingView chart with BUY/SELL markers.
+```
+* Serving Flask app 'bot'
+* Debug mode: on
+WARNING: This is a development server. Do not use it in a production deployment.
+* Running on http://127.0.0.1:5000
+* Restarting with stat
+* Debugger is active!
+```
 
-Insert image here.
+Incoming alert log:
 
-Screenshot 2: Webhook server logs showing a received alert.
+```
+Incoming alert: {'secret': '***', 'signal': 'buy', 'symbol': 'BTCUSDT'}
+127.0.0.1 - - [09/May/2026 16:51:59] "POST /webhook/tradingview HTTP/1.1" 200 -
 
-Insert image here.
+Incoming alert: {'secret': '***', 'signal': 'sell', 'symbol': 'BTCUSDT'}
+127.0.0.1 - - [09/May/2026 16:55:49] "POST /webhook/tradingview HTTP/1.1" 200 -
+```
 
-Screenshot 3: Binance Spot Testnet order confirmation.
+---
 
-Insert image here.
+## 9. Binance Spot Testnet Integration
 
-Screenshot 4: Local trade history in `data/trades.csv`.
+Binance Spot Testnet was used to safely simulate cryptocurrency trading.
 
-Insert image here.
+The Python bot connected to Binance Testnet using:
 
-## 6. Conclusion and Improvements
+- API Key
+- Secret Key
 
-The completed bot demonstrates an end-to-end automated demo trading workflow. TradingView generates signals using EMA crossover and RSI logic, sends JSON webhooks to the Flask server, and the Python bot records the alert and places demo market orders through Binance Spot Testnet.
+The following operations were tested:
 
-Possible improvements include stronger position tracking, risk management rules, stop-loss and take-profit orders, account balance checks before placing trades, better backtesting across multiple market conditions, and deployment on a cloud server with HTTPS.
+- Demo market BUY orders
+- Demo market SELL orders
+
+No real funds were used during testing.
+
+### 9.1 Testnet API Connection
+
+The Python bot connected using:
+
+```python
+client_API_URL = "https://testnet.binance.vision"
+```
+
+This ensured all trades were executed only in the Binance demo environment.
+
+Demo trade executed response:
+
+| message | order |
+|---|---|
+| Demo trade executed | orderId: 1176655, cumulativeQuoteQty: 0, executedQty: 0.001 |
+
+---
+
+## 10. Trade History Storage
+
+Trade history was stored locally in:
+
+```
+data/trades.csv
+```
+
+The CSV file recorded:
+
+- Time
+- Signal type
+- Trading pair
+- Quantity
+- Trade status
+- API response
+
+Example:
+
+| time | signal | symbol | quantity | status |
+|---|---|---|---|---|
+| 2026-05-09 | buy | BTCUSDT | 0.001 | success |
+| 2026-05-09 | sell | BTCUSDT | 0.001 | success |
+
+---
+
+## 11. Workflow Diagram
+
+The complete workflow of the system is shown below:
+
+```
+                TradingView Chart
+                      │
+               Pine Script Strategy
+                      │
+                Buy/Sell Signal
+                      │
+               Webhook JSON Alert
+                      │
+              Python Flask Server
+                      │
+          Binance Spot Testnet API
+                      │
+             Demo Trade Execution
+                      │
+              CSV Trade History
+```
+
+---
+
+## 12. Manual Webhook Testing
+
+Since TradingView webhook alerts require a paid subscription, webhook functionality was manually tested using curl commands.
+
+Example BUY request:
+
+```bash
+curl -X POST http://127.0.0.1:5000/webhook/tradingview \
+  -H "Content-Type: application/json" \
+  -d '{"secret":"my_secret_123","signal":"buy","symbol":"BTCUSDT"}'
+```
+
+Example SELL request:
+
+```bash
+curl -X POST http://127.0.0.1:5000/webhook/tradingview \
+  -H "Content-Type: application/json" \
+  -d '{"secret":"my_secret_123","signal":"sell","symbol":"BTCUSDT"}'
+```
+
+The Flask terminal successfully received the alerts and executed the demo trade workflow.
+
+---
+
+## 13. Results
+
+The project successfully achieved:
+
+- Trading signal generation using Pine Script
+- EMA and RSI strategy implementation
+- TradingView signal visualization
+- Webhook communication
+- Flask server implementation
+- Binance Spot Testnet integration
+- Demo BUY and SELL trade execution
+- CSV trade logging
+
+The complete automation chain worked successfully in the test environment.
+
+---
+
+## 14. Challenges Faced
+
+Some challenges encountered during development included:
+
+- TradingView webhook limitations on free plan
+- ngrok authentication setup
+- PowerShell curl command compatibility
+- Python package configuration
+- Binance Testnet API setup
+
+These issues were resolved through manual webhook testing and proper environment configuration.
+
+---
+
+## 15. Future Improvements
+
+Future improvements could include:
+
+- Stop-loss and take-profit automation
+- Advanced risk management
+- Streamlit or Flask dashboard interface
+- Real-time performance analytics
+- Multi-coin support
+- Database integration
+- Email or Telegram notifications
+- Live exchange deployment (with proper security)
+
+---
+
+## 16. Conclusion
+
+This project successfully demonstrated the implementation of an automated cryptocurrency trading bot using TradingView, Pine Script, Python Flask, webhooks, and Binance Spot Testnet.
+
+The system generated automated BUY and SELL signals using EMA crossover and RSI confirmation. Webhook communication successfully transferred alerts to the Flask server, which executed demo market trades on Binance Testnet and stored trade history locally.
+
+The project achieved the primary objective of building a fully automated demo trading workflow without using real funds. The implementation also demonstrated practical knowledge of algorithmic trading, API integration, Python backend development, and webhook automation.
+
+---
+
+*End of Report*
